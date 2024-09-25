@@ -1,0 +1,8 @@
+.icon-login svg{
+    display: none;
+    cursor: pointer;
+}
+.icon-login .eyes-icon{
+    cursor: pointer;
+    display: block;
+}

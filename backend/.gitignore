@@ -1,0 +1,4 @@
+/node_modules
+/.env
+/cloudConfig.js
+/Post.js

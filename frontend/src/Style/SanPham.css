@@ -1,0 +1,40 @@
+body{
+    margin-left: auto;
+    margin-right: auto;
+}
+.Category{
+    max-width: 1600px;
+    display: flex;
+    margin-left: auto;
+    margin-right: auto;
+    
+    flex-direction: row;
+    gap: 15px;
+}
+.Category .List{
+    padding-top: 20px;
+    display: flex;
+    flex-direction: column;
+}
+.Yie-List{
+    width: 300px;
+    border: 2px solid black;
+    height: 400px;
+}
+.card-yie {
+    display: flex;
+    
+}
+.card-yie button{
+    margin-left: auto;
+    margin-right: auto;
+    padding: 5px 73px;
+    border: 2px solid black;
+    border-radius: 2px;
+}
+.title-temp{
+    font-size: 4rem;
+    font-weight: 500;
+    letter-spacing: 0;
+    line-height: 1.125;
+}
