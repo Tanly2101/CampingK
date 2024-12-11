@@ -4,52 +4,50 @@ import { Button, IconButton } from "@material-tailwind/react";
 import { usePagination } from "../Context/PaginationContext";
 
 const Pagination = () => {
-  const [active, setActive] = useState(1);
   const [buttons, setButtons] = useState([]);
-
-  const { setPage, updateTotalItems, totalItems } = usePagination();
+  const { currentPage, setPage, totalItems, pageSize } = usePagination();
 
   const getItemProps = (index) => ({
-    variant: active === index ? "filled" : "text",
+    variant: currentPage === index ? "filled" : "text",
     color: "gray",
-    onClick: () => {
-      setActive(index);
-      setPage(index);
-    },
+    onClick: () => setPage(index),
   });
 
   useEffect(() => {
-    const totalPages = Math.ceil(totalItems / 4);
-    const buttonArray = Array.from({ length: totalPages }, (_, index) => (
-      <IconButton key={index + 1} {...getItemProps(index + 1)}>
-        {index + 1}
+    const totalPages = Math.ceil(totalItems / pageSize);
+    const start = Math.max(1, currentPage - 2);
+    const end = Math.min(totalPages, currentPage + 2);
+
+    const buttonArray = Array.from({ length: end - start + 1 }, (_, index) => (
+      <IconButton key={start + index} {...getItemProps(start + index)}>
+        {start + index}
       </IconButton>
     ));
     setButtons(buttonArray);
-  }, [totalItems, active]);
+  }, [totalItems, pageSize, currentPage]);
 
   const next = () => {
-    if (active < buttons.length) {
-      setPage(active + 1);
-      setActive(active + 1);
+    if (currentPage < buttons.length) {
+      setPage(currentPage + 1);
+      window.scrollTo(0, 0); // Cuộn về đầu trang
     }
   };
 
   const prev = () => {
-    if (active > 1) {
-      setPage(active - 1);
-      setActive(active - 1);
+    if (currentPage > 1) {
+      setPage(currentPage - 1);
+      window.scrollTo(0, 0); // Cuộn về đầu trang
     }
   };
 
   return (
     <div>
-      <div className="flex items-center gap-4 justify-center pt-[15px] flex-none h-[55px]">
+      <div className="flex items-center gap-4 justify-center pt-[15px] h-[55px]">
         <Button
           variant="text"
           className="flex items-center gap-2"
           onClick={prev}
-          disabled={active === 1}
+          disabled={currentPage === 1}
         >
           <ArrowLeftIcon strokeWidth={2} className="h-4 w-4" />
         </Button>
@@ -60,7 +58,7 @@ const Pagination = () => {
           variant="text"
           className="flex items-center gap-2"
           onClick={next}
-          disabled={active === buttons.length}
+          disabled={currentPage === buttons.length}
         >
           <ArrowRightIcon strokeWidth={2} className="h-4 w-4" />
         </Button>

@@ -4,6 +4,7 @@ import {
   MenuHandler,
   MenuList,
   MenuItem,
+  Tooltip,
   Button,
 } from "@material-tailwind/react";
 import { Link, Navigate } from "react-router-dom";
@@ -123,7 +124,13 @@ export default function Header() {
                     className="flex items-center space-x-4 border-b pb-4"
                   >
                     <img
-                      src={`/img/${Cart.Images}`}
+                      src={`${
+                        process.env.REACT_APP_SERVER_URL
+                      }/src/uploads/avatarProducts/${
+                        Cart.HinhAnh
+                          ? Cart.HinhAnh.split(",")[0]
+                          : "default-image.jpg"
+                      }`}
                       alt={Cart.Title}
                       className="w-20 h-20 object-cover rounded"
                     />
@@ -184,6 +191,11 @@ export default function Header() {
               >
                 Thanh Toán
               </button>
+              {!user && (
+                <div className="absolute z-10 p-2 text-xs text-white bg-gray-700 rounded bottom-full left-1/2 transform -translate-x-1/2 mb-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                  Cần Đăng Nhập Để Có Thể Thanh Toán
+                </div>
+              )}
             </Link>
           </div>
         </div>
@@ -218,9 +230,9 @@ export default function Header() {
               className="w-56 h-28"
               alt="logo"
             ></img>
-            <span className="text-[24px] font-semibold text-orange-700">
+            {/* <span className="text-[24px] font-semibold text-orange-700">
               Shop
-            </span>
+            </span> */}
           </Link>
         </div>
         <div className="Box-search flex-auto sm:w-full w-2/3">
@@ -229,7 +241,7 @@ export default function Header() {
 
         <nav className="sideBarB flex-auto w-1/3">
           <div className="flex items-center w-full justify-end">
-            <div className="shopping" onClick={handleopenShopping}>
+            <div className="shopping p-3" onClick={handleopenShopping}>
               <Link>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -275,7 +287,7 @@ export default function Header() {
               </div>
             )}
 
-            <Link to="/chiase" className="hideOnMobile">
+            <Link to="/blog" className="hideOnMobile">
               <span>Bolg</span>
             </Link>
             <span className="hideOnMobile">

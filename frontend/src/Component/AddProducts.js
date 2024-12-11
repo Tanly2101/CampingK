@@ -1,16 +1,19 @@
 import React, { useState } from "react";
 import axios from "axios";
 import CategoryPhu from "./CategoryPhu";
+import Swal from "sweetalert2";
+import { Editor } from "@tinymce/tinymce-react";
 const AddProductModal = ({ onClose }) => {
   const [productName, setProductName] = useState("");
   const [productPrice, setProductPrice] = useState("");
   const [productDescription, setProductDescription] = useState(""); // Mô tả sản phẩm
   const [thuonghieu, setThuonghieu] = useState(""); // Thương hiệu
   const [idCategory, setIdCategory] = useState(""); // Danh mục
-  const [productSold, setProductSold] = useState(0); // Số lượng sản phẩm
+  const [productSold, setProductSold] = useState(null); // Số lượng sản phẩm
   const [productImage, setProductImage] = useState([]); // Ảnh sản phẩm
   const [nameCategoryPhu, setNameCategoryPhu] = useState("");
   const [gianhap, setGianhap] = useState(""); // Giá nhập
+  const [preview, setPreview] = useState([]);
   const [chitiet, setChitiet] = useState(""); // Chi tiết sản phẩm
   // Dummy data for dropdowns (replace with your data source)
   const thuonghieuOptions = [
@@ -24,6 +27,7 @@ const AddProductModal = ({ onClose }) => {
     { value: 8, label: "Thousand" },
     { value: 9, label: "Yakima" },
     { value: 10, label: "Smartwool" },
+    { value: 11, label: "Thương Hiệu Khác" },
   ];
 
   const idCategoryOptions = [
@@ -35,11 +39,25 @@ const AddProductModal = ({ onClose }) => {
     { value: 6, label: "Chạy" },
     { value: 7, label: "Du Lịch" },
   ];
-
+  ///////////////////thêm ảnh
+  // const handleImageChange = (e) => {
+  //   setProductImage(Array.from(e.target.files)); // Convert FileList to Array
+  // };
   const handleImageChange = (e) => {
-    setProductImage(Array.from(e.target.files)); // Convert FileList to Array
+    const files = Array.from(e.target.files);
+    setProductImage((prevImages) => [...prevImages, ...files]);
+
+    // Create previews for each image
+    const imagePreviews = files.map((file) => URL.createObjectURL(file));
+    setPreview((prevPreviews) => [...prevPreviews, ...imagePreviews]);
   };
 
+  const removeImage = (index) => {
+    const updatedImages = productImage.filter((_, i) => i !== index);
+    const updatedPreviews = preview.filter((_, i) => i !== index);
+    setProductImage(updatedImages);
+    setPreview(updatedPreviews);
+  };
   const handleCategoryChange = (e) => {
     setIdCategory(e.target.value);
     // Reset additional category data when changing category
@@ -51,6 +69,14 @@ const AddProductModal = ({ onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (productImage.length === 0) {
+      Swal.fire({
+        icon: "warning",
+        title: "Chưa có ảnh đại diện",
+        timer: 2000,
+      });
+      return;
+    }
     const formData = new FormData();
     formData.append("Title", productName);
     formData.append("Price", productPrice);
@@ -80,7 +106,20 @@ const AddProductModal = ({ onClose }) => {
       );
 
       if (response.status === 201) {
-        alert("Product added successfully!");
+        // alert("Product added successfully!");
+        Swal.fire({
+          title: "Product added successfully!",
+          width: 600,
+          padding: "3em",
+          color: "#716add",
+          timer: 2000, // Thời gian tự động đóng
+          background: "#fff url(/images/trees.png)",
+          backdrop: `
+            rgba(0,0,123,0.4)
+            left top
+            no-repeat
+          `,
+        });
         onClose();
       } else {
         alert("Failed to add product!");
@@ -96,7 +135,7 @@ const AddProductModal = ({ onClose }) => {
         <h2 className="text-xl font-semibold mb-4">Add New Product</h2>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label className="block text-gray-700">Product Name</label>
+            <label className="block text-gray-700">Tên sản phẩm</label>
             <input
               type="text"
               value={productName}
@@ -106,7 +145,7 @@ const AddProductModal = ({ onClose }) => {
             />
           </div>
           <div className="mb-4">
-            <label className="block text-gray-700">Product Price</label>
+            <label className="block text-gray-700">Giá sản phẩm</label>
             <input
               type="number"
               value={productPrice}
@@ -116,7 +155,7 @@ const AddProductModal = ({ onClose }) => {
             />
           </div>
           <div className="mb-4">
-            <label className="block text-gray-700">Product Description</label>
+            <label className="block text-gray-700">Thông tin</label>
             <textarea
               value={productDescription}
               onChange={(e) => setProductDescription(e.target.value)}
@@ -124,7 +163,7 @@ const AddProductModal = ({ onClose }) => {
               rows="4"
             />
           </div>
-          <div className="mb-4">
+          {/* <div className="mb-4">
             <label className="block text-gray-700">Product Image</label>
             <input
               type="file"
@@ -132,9 +171,40 @@ const AddProductModal = ({ onClose }) => {
               className="w-full px-3 py-2 border rounded-md"
               multiple
             />
+          </div> */}
+          <div className="mb-4">
+            <label className="block text-gray-700">Hình ảnh đại diện</label>
+            <input
+              type="file"
+              onChange={handleImageChange}
+              className="w-full px-3 py-2 border rounded-md"
+              multiple
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-gray-700">Image Preview</label>
+            <div className="flex flex-wrap gap-4 mt-2">
+              {preview.map((image, index) => (
+                <div key={index} className="relative w-24 h-24">
+                  <img
+                    src={image}
+                    alt={`preview-${index}`}
+                    className="w-full h-full object-cover rounded-md"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(index)}
+                    className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md hover:bg-red-600"
+                  >
+                    X
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
           <div className="mb-4">
-            <label className="block text-gray-700">Number Sold</label>
+            <label className="block text-gray-700">Số lượng</label>
             <input
               type="number"
               value={productSold}
@@ -145,7 +215,7 @@ const AddProductModal = ({ onClose }) => {
             />
           </div>
           <div className="mb-4">
-            <label className="block text-gray-700">Brand</label>
+            <label className="block text-gray-700">Thương hiệu</label>
             <select
               value={thuonghieu}
               onChange={(e) => setThuonghieu(e.target.value)}
@@ -161,7 +231,7 @@ const AddProductModal = ({ onClose }) => {
             </select>
           </div>
           <div className="mb-4">
-            <label className="block text-gray-700">Category</label>
+            <label className="block text-gray-700">Loại sản phẩm</label>
             <select
               value={idCategory}
               onChange={handleCategoryChange}
@@ -183,7 +253,7 @@ const AddProductModal = ({ onClose }) => {
             />
           )}
           <div className="mb-4">
-            <label className="block text-gray-700">Nhập Giá</label>
+            <label className="block text-gray-700">Nhập giá nhập hàng</label>
             <input
               type="number"
               value={gianhap}
@@ -192,13 +262,57 @@ const AddProductModal = ({ onClose }) => {
               required
             />
           </div>
-          <div className="mb-4">
+          {/* <div className="mb-4">
             <label className="block text-gray-700">Chi Tiết Sản Phẩm</label>
             <textarea
               value={chitiet}
               onChange={(e) => setChitiet(e.target.value)}
               className="w-full px-3 py-2 border rounded-md"
               rows="4"
+            />
+          </div> */}
+          <div>
+            <label
+              htmlFor="chitiet"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Chi Tiết Sản Phẩm
+            </label>
+            <Editor
+              apiKey="hanuvt9goeoa4t35vf4y63bpjjadg7msb59meo5rw1vrnt8x" // Thay bằng API key của bạn
+              value={chitiet}
+              onEditorChange={(newContent) => setChitiet(newContent)} // Cập nhật giá trị `chitiet`
+              init={{
+                height: 500,
+                menubar: true,
+                plugins: [
+                  "advlist",
+                  "autolink",
+                  "link",
+                  "lists",
+                  "charmap",
+                  "preview",
+                  "anchor",
+                  "pagebreak",
+                  "searchreplace",
+                  "wordcount",
+                  "visualblocks",
+                  "visualchars",
+                  "code",
+                  "fullscreen",
+                  "insertdatetime",
+                  "media",
+                  "table",
+                  "emoticons",
+                  "help",
+                ],
+                toolbar:
+                  "undo redo | styles | bold italic | alignleft aligncenter alignright alignjustify | " +
+                  "bullist numlist outdent indent | link | print preview fullscreen | " +
+                  "forecolor backcolor emoticons | help",
+                image_advtab: false, // Tắt tab chỉnh sửa ảnh
+                automatic_uploads: false, // Tắt tải ảnh tự động
+              }}
             />
           </div>
           <div className="flex justify-end">

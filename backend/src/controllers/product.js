@@ -79,7 +79,29 @@ export const getProductsByPrice = async (req, res) => {
     res.status(500).json({ message: "Đã xảy ra lỗi khi tìm kiếm sản phẩm." });
   }
 };
-export const deleteProductController = async (req, res) => {
+// export const deleteProductController = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+
+//     if (!id) {
+//       return res.status(400).json({ message: "Product ID is required" });
+//     }
+
+//     const result = await productService.deleteProducts(id);
+
+//     if (result.affectedRows === 0) {
+//       return res.status(404).json({ message: "Product not found" });
+//     }
+
+//     return res.status(200).json({ message: "Product deleted successfully" });
+//   } catch (error) {
+//     console.error("Error deleting product:", error);
+//     return res
+//       .status(500)
+//       .json({ message: "An error occurred while deleting the product" });
+//   }
+// };
+export const toggleProductStatusController = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -87,18 +109,21 @@ export const deleteProductController = async (req, res) => {
       return res.status(400).json({ message: "Product ID is required" });
     }
 
-    const result = await productService.deleteProducts(id);
+    // Gọi service để chuyển đổi trạng thái sản phẩm
+    const result = await productService.toggleProductStatus(id);
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    return res.status(200).json({ message: "Product deleted successfully" });
+    return res
+      .status(200)
+      .json({ message: "Product status updated successfully" });
   } catch (error) {
-    console.error("Error deleting product:", error);
+    console.error("Error updating product status:", error);
     return res
       .status(500)
-      .json({ message: "An error occurred while deleting the product" });
+      .json({ message: "An error occurred while updating the product status" });
   }
 };
 export const createProduct = async (req, res) => {
@@ -246,5 +271,33 @@ export const updateProduct = async (req, res) => {
     res
       .status(500)
       .json({ message: "Error updating product", error: error.message });
+  }
+};
+export const addProductDaxem = async (req, res) => {
+  const { productId } = req.body;
+
+  if (!productId) {
+    return res.status(400).json({ error: "Product ID is required" });
+  }
+
+  try {
+    // Truyền productId vào hàm service
+    await productService.addRecentlyViewedProduct(productId);
+    res.status(200).json({ message: "Product added to recently viewed" });
+  } catch (error) {
+    console.error("Error details:", error);
+    res
+      .status(500)
+      .json({ error: "Failed to add product", details: error.message });
+  }
+};
+
+// Lấy danh sách sản phẩm đã xem
+export const getProductsDaxem = async (req, res) => {
+  try {
+    const products = await productService.getRecentlyViewedProducts();
+    res.status(200).json(products);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch products" });
   }
 };

@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from "react";
 // import { Overview, Loading } from ".";
-
+import { ClipLoader } from "react-spinners";
 import { FaCamera } from "react-icons/fa6";
 import { ImBin } from "react-icons/im";
 import { useAuth } from "../Context/AuthContext";
 import { Input } from "@material-tailwind/react";
+import Swal from "sweetalert2";
 import axios from "axios";
 // import { apiUploadImage } from '../../serviecs/post';
 const CreatePost = () => {
   const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [loadingImg, setLoadingImg] = useState(false);
+  const [preview, setPreview] = useState(null);
   // const [fileState, setFileState] = useState({ images: [] });
   // /////////////////////////////////////////////////////////
   // const handleDeleteImg = (image) => {
@@ -49,11 +53,10 @@ const CreatePost = () => {
         // Xử lý và lưu URL của hình ảnh vào state
         const processedUrls = response.data.map((image) => ({
           ...image,
-          imageUrl: `${process.env.REACT_APP_SERVER_URL}/src${image.Images_path}`,
+          imageUrl: `${image.Images_path}`,
         }));
-        console.log("Processed Image URLs:", processedUrls);
+        // console.log("Processed Image URLs:", processedUrls);
         setImages(response.data);
-
         setImageUrls(processedUrls);
       })
       .catch((error) => {
@@ -78,10 +81,23 @@ const CreatePost = () => {
   // };
   const handleFileChange = (e) => {
     const file = e.target.files[0];
-    setFormData((prevFormData) => ({
-      ...prevFormData,
-      Images_path: file,
-    }));
+    if (file) {
+      setLoadingImg(true);
+      // Bắt đầu loading
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+
+      setTimeout(() => {
+        setFormData((prevFormData) => ({
+          ...prevFormData,
+          Images_path: file,
+        }));
+        setLoadingImg(false); // Kết thúc loading sau khi xử lý
+      }, 1000); // Mô phỏng xử lý tệp (thay 1000 bằng thời gian thực tế nếu cần)
+    }
   };
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -93,7 +109,7 @@ const CreatePost = () => {
       dataToSend.append("mydata", formData.Images_path);
 
       try {
-        // Send formData to the server using fetch
+        setLoading(true);
         const response = await fetch(
           `${process.env.REACT_APP_SERVER_URL}/api/v1/upload-experience`,
           {
@@ -109,25 +125,54 @@ const CreatePost = () => {
         const data = await response.json();
         console.log("Success:", data);
 
-        // Display a success message
-        alert("Upload successful!");
+        // Hiển thị thông báo thành công bằng alert
+        // alert("Upload thành công!");
+        Swal.fire({
+          title: "Upload thành công!",
+          width: 600,
+          padding: "3em",
+          color: "#716add",
+          timer: 2000, // Thời gian tự động đóng
+          background: "#fff url(/images/trees.png)",
+          backdrop: `
+            rgba(0,0,123,0.4)
+            left top
+            no-repeat
+          `,
+        });
 
-        // Reset the form data
+        // Reset form data
         setFormData({
           name: "",
           email: "",
           Images_path: null,
         });
 
-        toggleModal(); // Close modal after successful submission
+        // Đóng modal sau khi submit thành công (giả sử toggleModal được định nghĩa ở nơi khác)
+        toggleModal();
       } catch (error) {
-        console.error("Error:", error);
+        // console.error("Error:", error);
         alert(
-          error.message || "An unexpected error occurred. Please try again."
+          error.message || "Đã xảy ra lỗi không mong muốn. Vui lòng thử lại."
         );
+      } finally {
+        setLoading(false); // Kết thúc loading
       }
     } else {
-      alert("Please fill in all the fields.");
+      Swal.fire({
+        title: "Vui lòng điền đầy đủ thông tin.",
+        width: 600,
+        padding: "3em",
+        color: "#716add",
+        timer: 2000, // Thời gian tự động đóng
+        background: "#fff url(/images/trees.png)",
+        backdrop: `
+          rgba(0,0,123,0.4)
+          left top
+          no-repeat
+        `,
+      });
+      // alert("Vui lòng điền đầy đủ thông tin.");
     }
   };
 
@@ -144,11 +189,22 @@ const CreatePost = () => {
   return (
     <div className="flex flex-col min-h-screen">
       <main className="flex-grow container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-4">#NeverStopExploring</h1>
+        <h1 className="text-3xl font-bold mb-4">#Dừng Lại Và Khám Phá</h1>
         <p className="mb-4">
-          We love seeing our gear out in the wild. Share your photos
-          @thenorthface to be featured here.
+          Chúng tôi thích nhìn thấy thiết bị của mình ở nơi hoang dã. Chia sẻ
+          ảnh của bạn @CampingK để được giới thiệu ở đây.
         </p>
+        <div className="flex justify-between mt-4">
+          {/* <button className="text-blue-500 hover:underline">
+            Khám Phá Thư Viện →
+          </button> */}
+          <button
+            onClick={toggleModal}
+            className="text-blue-500 hover:underline"
+          >
+            Thêm Ảnh Của Bạn Vào →
+          </button>
+        </div>
         <div className="grid grid-cols-3 gap-4">
           {imageUrls
             .filter((image) => image.duyet === "DaDuyet")
@@ -162,22 +218,11 @@ const CreatePost = () => {
               </div>
             ))}
         </div>
-        <div className="flex justify-between mt-4">
-          <button className="text-blue-500 hover:underline">
-            Explore the Gallery →
-          </button>
-          <button
-            onClick={toggleModal}
-            className="text-blue-500 hover:underline"
-          >
-            Add your photo →
-          </button>
-        </div>
       </main>
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1001]">
           <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold">Add your photo</h2>
@@ -190,6 +235,12 @@ const CreatePost = () => {
             </div>
             <form onSubmit={handleSubmit}>
               <div className="">
+                <label
+                  htmlFor="name"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  Tên
+                </label>
                 <input
                   type="text"
                   name="name"
@@ -203,9 +254,15 @@ const CreatePost = () => {
                 />
                 {!formData.name && (
                   <p className="text-red-500 text-sm mt-1">
-                    This field is required.
+                    Thiếu Trường Này Rồi.
                   </p>
                 )}
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  Email
+                </label>
                 <input
                   type="email"
                   value={formData.email}
@@ -218,7 +275,7 @@ const CreatePost = () => {
                 />
                 {!formData.email && (
                   <p className="text-red-500 text-sm mt-1">
-                    This field is required.
+                    Thiếu Trường Này Rồi.
                   </p>
                 )}
               </div>
@@ -229,57 +286,98 @@ const CreatePost = () => {
                 </label>
                 <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
                   <div className="space-y-1 text-center">
-                    <svg
-                      className="mx-auto h-12 w-12 text-gray-400"
-                      stroke="currentColor"
-                      fill="none"
-                      viewBox="0 0 48 48"
-                      aria-hidden="true"
-                    >
-                      <path
-                        d="M28 8h12v12h-4v-8h-8v4h-4V8z"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                      />
-                      <path
-                        d="M8 28h12v12H8V28z"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                      />
-                      <path
-                        d="M4 20h4v4H4v-4zm20 0h4v4h-4v-4zm8 8h4v4h-4v-4zM4 36h4v4H4v-4z"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                      />
-                    </svg>
-                    <div className="flex text-sm text-gray-600">
-                      <label
-                        htmlFor="file-upload"
-                        className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
-                      >
-                        <span>Upload a file</span>
-                        <input
-                          id="file-upload"
-                          name="mydata"
-                          type="file"
-                          className="sr-only"
-                          onChange={handleFileChange}
-                          required
-                        />
-                      </label>
-                      <p className="pl-1">or drag and drop</p>
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      PNG, JPG, GIF up to 10MB
-                    </p>
+                    {loadingImg ? (
+                      <div className="flex justify-center items-center">
+                        <ClipLoader color="#e882d8" size={35} />
+                        <p className="ml-2 text-sm text-gray-500">
+                          Đang xử lý...
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        {formData.Images_path ? (
+                          <div>
+                            <p className="text-sm text-gray-700 mb-2">
+                              Tệp đã chọn:
+                              {preview && (
+                                <img
+                                  src={preview}
+                                  alt="Preview"
+                                  className="h-48 w-full object-cover rounded-md"
+                                />
+                              )}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormData((prevFormData) => ({
+                                  ...prevFormData,
+                                  Images_path: null,
+                                }));
+                                setPreview(null);
+                              }}
+                              className="text-red-500 underline text-sm"
+                            >
+                              Xóa ảnh
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <svg
+                              className="mx-auto h-12 w-12 text-gray-400"
+                              stroke="currentColor"
+                              fill="none"
+                              viewBox="0 0 48 48"
+                              aria-hidden="true"
+                            >
+                              <path
+                                d="M28 8h12v12h-4v-8h-8v4h-4V8z"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                              />
+                              <path
+                                d="M8 28h12v12H8V28z"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                              />
+                              <path
+                                d="M4 20h4v4H4v-4zm20 0h4v4h-4v-4zm8 8h4v4h-4v-4zM4 36h4v4H4v-4z"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                              />
+                            </svg>
+                            <div className="flex text-sm text-gray-600">
+                              <label
+                                htmlFor="file-upload"
+                                className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
+                              >
+                                <span>Upload a file</span>
+                                <input
+                                  id="file-upload"
+                                  name="mydata"
+                                  type="file"
+                                  className="sr-only"
+                                  onChange={handleFileChange}
+                                  required
+                                />
+                              </label>
+                              <p className="pl-1">or drag and drop</p>
+                            </div>
+                            <p className="text-xs text-gray-500">
+                              PNG, JPG, GIF up to 10MB
+                            </p>
+                          </>
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
-                {!formData.Images_path && (
+                {!formData.Images_path && !loadingImg && (
                   <p className="text-red-500 text-sm mt-1">
-                    A photo is required.
+                    Thiếu Trường Này Rồi.
                   </p>
                 )}
               </div>
@@ -294,7 +392,11 @@ const CreatePost = () => {
                     : "bg-gray-300 text-gray-500 cursor-not-allowed"
                 }`}
               >
-                Submit photo
+                {loading ? (
+                  <ClipLoader color="#e882d8" size={35} />
+                ) : (
+                  "Đăng Ảnh"
+                )}
               </button>
             </form>
           </div>

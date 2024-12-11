@@ -1,14 +1,24 @@
 import express from "express";
 import * as uploadNew from "../controllers/upload";
-const uploadCloud = require("../Config/cloudConfig");
+const { uploadCloud } = require("../Config/cloudConfig");
+const { uploadToUserUploads } = require("../Config/cloudConfig");
+const { uploadToAvatarUploads } = require("../Config/cloudConfig");
 
 const router = express.Router();
 
-router.post("/uploadfile", uploadNew.uploadController);
-router.post("/upload-experience", uploadNew.uploadExperienceController); ///
+router.post(
+  "/uploadfile",
+  uploadToAvatarUploads.single("myfile"),
+  uploadNew.uploadController
+);
+router.post(
+  "/upload-experience",
+  uploadToUserUploads.single("mydata"),
+  uploadNew.uploadExperienceController
+); ///
 router.get("/images", uploadNew.getAllImages);
 router.patch("/updateDuyet/:id", uploadNew.updateDuyet);
-
+router.delete("/delete-tin-dang/:id", uploadNew.deleteTinDang);
 router.post(
   "/upload",
   uploadCloud.array("images", 10),

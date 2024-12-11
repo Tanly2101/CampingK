@@ -30,21 +30,27 @@ const uploadService = require("../services/upload");
 // };
 export const uploadController = async (req, res, next) => {
   try {
-    const imagePath = await uploadService.uploadFileService(req, res);
+    const { imagePath } = await uploadService.uploadFileService(req);
     res.json({ path: imagePath });
   } catch (error) {
     console.error("Error during file upload:", error); // Log the error
     res.status(error.status || 500).json({ message: error.message });
   }
 };
-export const uploadExperienceController = async (req, res, next) => {
-  try {
-    const imagePath = await uploadService.uploadExperienceService(req, res);
-    res.json({ path: imagePath });
-  } catch (error) {
+// export const uploadExperienceController = async (req, res, next) => {
+//   try {
+//     const imagePath = await uploadService.uploadExperienceService(req, res);
+//     res.json({ path: imagePath });
+//   } catch (error) {
+//     console.error("Error during experience upload:", error);
+//     res.status(error.status || 500).json({ message: error.message });
+//   }
+// };
+export const uploadExperienceController = (req, res, next) => {
+  uploadService.uploadExperienceService(req, res).catch((error) => {
     console.error("Error during experience upload:", error);
     res.status(error.status || 500).json({ message: error.message });
-  }
+  });
 };
 export const getAllImages = async (req, res) => {
   try {
@@ -199,7 +205,34 @@ export const deleteBlog = async (req, res) => {
     return res.status(500).json({ message: "Server error", error });
   }
 };
+export const deleteTinDang = async (req, res) => {
+  const TDId = req.params.id;
+  try {
+    // Lấy thông tin về tin đăng từ cơ sở dữ liệu
+    const records = await uploadService.getAll();
+    console.log(records);
+    const recordToDelete = records.find(
+      (record) => record.idImg === Number(TDId)
+    );
+    console.log(recordToDelete);
+    if (!recordToDelete) {
+      return res.status(404).json({ message: "Record not found" });
+    }
 
+    const publicId = recordToDelete.public_id; // Lấy public_id từ bản ghi
+
+    // Xóa hình ảnh từ Cloudinary
+    await uploadService.deleteImageFromCloudinary(publicId);
+
+    // Xóa tin đăng từ cơ sở dữ liệu
+    await uploadService.deleteTinDangFromDatabase(TDId);
+
+    return res.status(200).json({ message: "Blog deleted successfully" });
+  } catch (error) {
+    console.error("Error in deleteTinDang:", error);
+    return res.status(500).json({ message: "Server error", error });
+  }
+};
 export const deleteBlogImages = async (req, res) => {
   const blogId = req.params.id;
 
@@ -225,6 +258,16 @@ export const getAllData = async (req, res) => {
     const blogImages = await uploadService.getBlogImages();
 
     res.status(200).json({ blogs, blogImages });
+  } catch (error) {
+    console.error("Error fetching data:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+export const getAllTinDang = async (req, res) => {
+  try {
+    const TinDang = await uploadService.getTinDang();
+
+    res.status(200).json({ TinDang });
   } catch (error) {
     console.error("Error fetching data:", error);
     res.status(500).json({ message: "Internal server error" });

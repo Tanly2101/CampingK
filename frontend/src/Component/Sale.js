@@ -19,7 +19,7 @@ const Sale = () => {
     axios
       .get(`${process.env.REACT_APP_SERVER_URL}/api/v1/product`)
       .then((response) => {
-        console.log("Dữ liệu sản phẩm:", dataLoai);
+        // console.log("Dữ liệu sản phẩm:", dataLoai);
         setDataLoai(response.data);
       })
       .catch((error) => {});
@@ -33,7 +33,7 @@ const Sale = () => {
         );
 
         const data = response.data;
-        console.log("Dữ liệu sản phẩm:", data);
+        // console.log("Dữ liệu sản phẩm:", data);
 
         const salePeriods = data.reduce((accumulator, current) => {
           const key = `${current.sale_start_time}_${current.sale_end_time}`;
@@ -66,8 +66,8 @@ const Sale = () => {
           setCountdown(initialCountdown);
         }
 
-        console.log("Sản phẩm giảm giá:", newProducts);
-        console.log("Thời gian giảm giá duy nhất:", newUniqueSalePeriods);
+        // console.log("Sản phẩm giảm giá:", newProducts);
+        // console.log("Thời gian giảm giá duy nhất:", newUniqueSalePeriods);
       } catch (error) {
         console.error("Lỗi khi lấy sản phẩm giảm giá:", error);
       }
@@ -166,7 +166,7 @@ const Sale = () => {
     <div>
       <div className="container mx-auto px-4">
         <h1 className="text-4xl font-bold text-center mb-8">
-          Bộ Sưu Tập Đi Mưa Hoàn Hảo
+          Bộ Sưu Tập Giảm Giá
         </h1>
         <div className="text-center mb-4">
           <p className="text-lg font-semibold">Thời gian còn lại cho ưu đãi:</p>

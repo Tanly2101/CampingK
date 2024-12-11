@@ -3,11 +3,19 @@ const con = require("../Config/connectDatabase"); // Điều chỉnh đường d
 // Route để lấy dữ liệu người dùng
 export const checkAccount = async (phone) => {
   try {
+    // Kết nối tới cơ sở dữ liệu
     const connection = await con.getConnection();
-    const [rows, fields] = await connection.query(`
-          SELECT * FROM khachhangs WHERE phone= ${phone}
-        `);
+
+    // Sử dụng placeholder (?) để truyền giá trị `phone` vào truy vấn một cách an toàn
+    const [rows, fields] = await connection.query(
+      `SELECT * FROM khachhangs WHERE phone = ?`,
+      [phone]
+    );
+
+    // Giải phóng kết nối sau khi truy vấn xong
     connection.release();
+
+    // Trả về kết quả truy vấn
     return rows;
   } catch (error) {
     console.error("Đã xảy ra lỗi:", error);
@@ -70,5 +78,30 @@ export const updateRoleById = async (userId) => {
     return result;
   } catch (error) {
     throw new Error("Error updating role in database");
+  }
+};
+export const getUserById = async (userId) => {
+  try {
+    const [rows] = await con.query(
+      "SELECT password FROM khachhangs WHERE id = ?",
+      [userId]
+    );
+    return rows.length > 0 ? rows[0] : null;
+  } catch (error) {
+    console.error("Error fetching user by ID:", error.message);
+    throw new Error("Failed to fetch user by ID");
+  }
+};
+
+export const updatePassword = async (userId, hashedPassword) => {
+  try {
+    const [result] = await con.query(
+      "UPDATE khachhangs SET password = ? WHERE id = ?",
+      [hashedPassword, userId]
+    );
+    return result.affectedRows > 0;
+  } catch (error) {
+    console.error("Error updating password:", error.message);
+    throw new Error("Failed to update password");
   }
 };

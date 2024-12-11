@@ -54,12 +54,13 @@ const ProductInfor = ({ productId }) => {
         ))}
       </div>
       <div className="border w-full p-4">
-        <div className="List-items">
-          <li>
-            {tabsData.some((el) => el.id === activedTab) &&
-              tabsData.find((el) => el.id === activedTab)?.content}
-          </li>
-        </div>
+        {tabsData.some((el) => el.id === activedTab) && (
+          <div
+            dangerouslySetInnerHTML={{
+              __html: tabsData.find((el) => el.id === activedTab)?.content,
+            }}
+          />
+        )}
       </div>
     </div>
   );

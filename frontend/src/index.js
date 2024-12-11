@@ -46,6 +46,8 @@ import { AuthProvider } from "./Context/AuthContext";
 import { CartProvider } from "./Context/CartContext";
 import { LocationProvider } from "./Context/CheckOutContext";
 import { ProductIdProvider } from "./Context/ProductsIdContext";
+import { SubcategoryProvider } from "./Context/CategoryContext";
+import { RecentlyViewedProvider } from "./Context/RecentlyViewedContext";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
@@ -57,7 +59,11 @@ root.render(
             <CartProvider>
               <LocationProvider>
                 <ProductIdProvider>
-                  <App />
+                  <SubcategoryProvider>
+                    <RecentlyViewedProvider>
+                      <App />
+                    </RecentlyViewedProvider>
+                  </SubcategoryProvider>
                 </ProductIdProvider>
               </LocationProvider>
             </CartProvider>

@@ -92,6 +92,14 @@ const OrderManage = () => {
       console.error("Error updating order status:", error);
     }
   };
+  const formatCurrency = (amount) => {
+    const formatter = new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    });
+
+    return formatter.format(amount);
+  };
   // const handleChangeOrderStatus = (order) => {
   //   setSelectedOrder(order);
   //   setModalVisible(true);
@@ -146,7 +154,7 @@ const OrderManage = () => {
                     variant="small"
                     className="font-normal leading-none opacity-70"
                   >
-                    Order ID
+                    Mã Đơn Hàng
                   </Typography>
                 </th>
                 <th className="border-y border-blue-gray-100 bg-blue-gray-50/50 p-4">
@@ -170,7 +178,7 @@ const OrderManage = () => {
                     variant="small"
                     className="font-normal leading-none opacity-70"
                   >
-                    Order Date
+                    Ngày Giao Hàng
                   </Typography>
                 </th>
                 <th className="border-y border-blue-gray-100 bg-blue-gray-50/50 p-4">
@@ -178,7 +186,7 @@ const OrderManage = () => {
                     variant="small"
                     className="font-normal leading-none opacity-70"
                   >
-                    Shipping Address
+                    Địa Chỉ
                   </Typography>
                 </th>
                 <th className="border-y border-blue-gray-100 bg-blue-gray-50/50 p-4">
@@ -186,7 +194,7 @@ const OrderManage = () => {
                     variant="small"
                     className="font-normal leading-none opacity-70"
                   >
-                    Total Amount
+                    Tổng Giá
                   </Typography>
                 </th>
                 <th className="border-y border-blue-gray-100 bg-blue-gray-50/50 p-4">
@@ -194,7 +202,7 @@ const OrderManage = () => {
                     variant="small"
                     className="font-normal leading-none opacity-70"
                   >
-                    Order Status
+                    Trạng Thái
                   </Typography>
                 </th>
                 <th className="border-y border-blue-gray-100 bg-blue-gray-50/50 p-4">
@@ -202,7 +210,7 @@ const OrderManage = () => {
                     variant="small"
                     className="font-normal leading-none opacity-70"
                   >
-                    Actions
+                    Hành Động
                   </Typography>
                 </th>
                 <th className="border-y border-blue-gray-100 bg-blue-gray-50/50 p-4">
@@ -210,7 +218,7 @@ const OrderManage = () => {
                     variant="small"
                     className="font-normal leading-none opacity-70"
                   >
-                    Update Order Status
+                    Cập Nhật Trạng Thái
                   </Typography>
                 </th>
                 <th className="border-y border-blue-gray-100 bg-blue-gray-50/50 p-4"></th>
@@ -240,13 +248,18 @@ const OrderManage = () => {
                     </Typography>
                   </td>
                   <td className="p-4 border-b border-blue-gray-50">
-                    <Typography variant="small" className="font-normal">
-                      {order.shipping_address}
+                    <Typography
+                      variant="small"
+                      className="font-normal truncate overflow-hidden whitespace-nowrap line-clamp"
+                    >
+                      {/* {order.shipping_address}
+                      {""} */}
+                      {`${order.shipping_address.slice(0, 20)}...`}
                     </Typography>
                   </td>
                   <td className="p-4 border-b border-blue-gray-50">
                     <Typography variant="small" className="font-normal">
-                      ${order.total_amount}
+                      {formatCurrency(order.total_amount)}
                     </Typography>
                   </td>
                   <td className="p-4 border-b border-blue-gray-50">
@@ -301,9 +314,9 @@ const OrderManage = () => {
                             <MenuItem value="Chờ Lấy Hàng">
                               Chờ Lấy Hàng
                             </MenuItem>
-                            <MenuItem value="Chờ Giao Hàng">
+                            {/* <MenuItem value="Chờ Giao Hàng">
                               Chờ Giao Hàng
-                            </MenuItem>
+                            </MenuItem> */}
                             <MenuItem value="Đã Giao">Đã Giao</MenuItem>
                           </Select>
                         </div>
@@ -369,7 +382,7 @@ const OrderManage = () => {
 
           {isModalOpen && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-[1001]">
-              <div className="bg-white p-6 rounded-lg w-11/12 h-5/6 overflow-auto relative">
+              <div className="bg-white p-6 rounded-lg h-5/6 overflow-auto relative">
                 <button
                   onClick={() => setIsModalOpen(false)} // Đóng modal
                   className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import Swal from "sweetalert2";
 const UserManage = () => {
   const [account, setAccount] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -65,10 +66,24 @@ const UserManage = () => {
       );
 
       // Hiển thị thông báo thành công
-      alert(response.data.message || "Role updated successfully!");
-
-      // Làm mới trang
-      window.location.reload();
+      // alert(response.data.message || "Role updated successfully!");
+      Swal.fire({
+        title: response.data.message || "Role updated successfully!",
+        width: 600,
+        padding: "3em",
+        color: "#716add",
+        background: "#fff url(/images/trees.png)",
+        backdrop: `
+          rgba(0,0,123,0.4)
+          left top
+          no-repeat
+        `,
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Làm mới trang sau khi ấn OK
+          window.location.reload();
+        }
+      });
     } catch (error) {
       console.error("Error updating role:", error);
 
@@ -106,9 +121,9 @@ const UserManage = () => {
           <thead>
             <tr className="bg-gray-200">
               <th className="border border-gray-300 p-2">ID</th>
-              <th className="border border-gray-300 p-2">Name</th>
-              <th className="border border-gray-300 p-2">Email</th>
-              <th className="border border-gray-300 p-2">Action</th>
+              <th className="border border-gray-300 p-2">Tên</th>
+              <th className="border border-gray-300 p-2">Số Điện Thoại</th>
+              <th className="border border-gray-300 p-2">Hành Động</th>
             </tr>
           </thead>
           <tbody>
@@ -117,7 +132,7 @@ const UserManage = () => {
                 <tr key={item.id} className="text-center">
                   <td className="border border-gray-300 p-2">{item.id}</td>
                   <td className="border border-gray-300 p-2">{item.nameTK}</td>
-                  <td className="border border-gray-300 p-2">{item.email}</td>
+                  <td className="border border-gray-300 p-2">{item.phone}</td>
                   <td className="border border-gray-300 p-2">
                     <button
                       className={`py-1 px-3 rounded ${
@@ -127,7 +142,7 @@ const UserManage = () => {
                       }`}
                       onClick={() => handleRoleChange(item.id)}
                     >
-                      {item.vaitro === "1" ? "Revoke Admin" : "Grant Admin"}
+                      {item.vaitro === "1" ? "Hủy Admin" : "Cho Admin"}
                     </button>
                   </td>
                 </tr>

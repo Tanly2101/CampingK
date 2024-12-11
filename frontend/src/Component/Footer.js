@@ -11,12 +11,12 @@ const Footer = () => {
           <div className="wave" id="wave3"></div>
           <div className="wave" id="wave4"></div>
         </div>
-        <div className="w-[1600px] m-auto sm:w-full">
+        <div className="w-full m-auto sm:w-full">
           <div className="Final grid grid-cols-2 gap-4">
             <div>Go further. Sleep wild.</div>
 
             <div className="grid grid-cols-3 gap-4">
-              <div className="grid grid-row-4 gap-1 h-10 flex justify-center">
+              <div className="grid grid-row-4 gap-1 h-10  justify-center">
                 <p style={{ fontSize: "16px" }}>SITE</p>
                 <Link>Shop all</Link>
                 <Link>Out story</Link>

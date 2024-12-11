@@ -119,7 +119,12 @@ export default function RevenueManage() {
       colors: ["#437fdf", "#8e31b9", "#1ded81", "#f16e6e"],
       yaxis: {
         labels: {
-          formatter: (value) => {
+          formatter: (value, index) => {
+            if (value == null) return ""; // Handle undefined or null values
+            if (index === 1) {
+              // Index 1 corresponds to the "Order" series
+              return value.toLocaleString("vi-VN");
+            }
             return new Intl.NumberFormat("vi-VN", {
               style: "currency",
               currency: "VND",
@@ -129,7 +134,15 @@ export default function RevenueManage() {
       },
       tooltip: {
         y: {
-          formatter: (value) => {
+          formatter: (value, { seriesIndex }) => {
+            // Ensure value is a valid number
+            if (typeof value !== "number" || isNaN(value)) return "N/A"; // Return a default fallback text for invalid values
+
+            if (seriesIndex === 1) {
+              // Index 1 corresponds to the "Order" series
+              return value.toLocaleString("vi-VN");
+            }
+
             return new Intl.NumberFormat("vi-VN", {
               style: "currency",
               currency: "VND",
@@ -275,7 +288,7 @@ export default function RevenueManage() {
             </div>
             <div className="text-center">
               <Typography variant="small" color="gray" className="font-medium">
-                Total Orders
+                Tổng Đơn Hàng Thành Công
               </Typography>
               <Typography variant="h3" color="blue-gray">
                 {total.tongDon !== undefined
@@ -294,7 +307,7 @@ export default function RevenueManage() {
             </div>
             <div className="text-center">
               <Typography variant="small" color="gray" className="font-medium">
-                Sold Products
+                Sản Phẩm Đã Bán
               </Typography>
               <Typography variant="h3" color="blue-gray">
                 {sales.tongsanpham !== undefined
@@ -313,29 +326,29 @@ export default function RevenueManage() {
             </div>
             <div className="text-center">
               <Typography variant="small" color="gray" className="font-medium">
-                This Month's Revenue
+                Doanh Thu Tháng Này
               </Typography>
               <div className="text-blue-gray-900 mt-2">
                 {now && now.revenue !== undefined ? (
                   <div className="space-y-1">
                     <p className="font-semibold">
-                      Month:{" "}
+                      Tháng:{" "}
                       <span className="text-blue-500">{now.month_number}</span>
                     </p>
                     <p className="font-semibold">
-                      Revenue:{" "}
+                      Doanh Thu:{" "}
                       <span className="text-green-500">
                         {now.revenue.toLocaleString()}
                       </span>
                     </p>
                     <p className="font-semibold">
-                      Profit:{" "}
+                      Lợi Nhuận:{" "}
                       <span className="text-green-500">
                         {now.profit.toLocaleString()}
                       </span>
                     </p>
                     <p className="font-semibold">
-                      Shipping Cost:{" "}
+                      Giá Shipping:{" "}
                       <span className="text-red-500">
                         {now.shipping_cost.toLocaleString()}
                       </span>
@@ -409,10 +422,10 @@ export default function RevenueManage() {
         <Card className="flex-1 border w-full border-gray-300 rounded-lg shadow-lg bg-white">
           <CardHeader className="p-4 text-center">
             <Typography variant="h6" color="blue-gray">
-              Monthly Revenue
+              Doanh Thu Hàng Tháng
             </Typography>
             <Typography variant="small" color="gray" className="font-normal">
-              Detailed Analysis Chart
+              Biều Đồ Phân Tích Chi Tiết
             </Typography>
           </CardHeader>
           <CardBody className="p-4">
@@ -425,10 +438,10 @@ export default function RevenueManage() {
         <Card className="flex-1 border w-full border-gray-300 rounded-lg shadow-lg bg-white">
           <CardHeader className="p-4 text-center">
             <Typography variant="h6" color="blue-gray">
-              Profit
+              Lợi Nhuận
             </Typography>
             <Typography variant="small" color="gray" className="font-normal">
-              Profit of Otis Watch
+              Lợi Nhuận của CampingK
             </Typography>
           </CardHeader>
           <CardBody className="p-4">
@@ -442,10 +455,10 @@ export default function RevenueManage() {
         <Card className="w-full border border-gray-300 rounded-lg shadow-lg bg-white">
           <CardHeader className="p-4 text-center">
             <Typography variant="h6" color="blue-gray">
-              Sales vs Expense
+              Bán Hàng và Chi Phí
             </Typography>
             <Typography variant="small" color="gray" className="font-normal">
-              Sales and Expense Comparison
+              So Sánh Doanh Thu Và Chi Phí
             </Typography>
           </CardHeader>
           <CardBody className="p-4">

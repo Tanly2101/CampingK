@@ -51,98 +51,209 @@ const storage = multer.diskStorage({
 });
 
 // Cài đặt Multer upload
-const upload = multer({ storage: storage }).single("myfile");
+// const upload = multer({ storage: storage }).single("myfile");
 
-export const uploadFileService = (req, res) => {
-  return new Promise((resolve, reject) => {
-    upload(req, res, async function (err) {
-      if (err) {
-        console.error("Upload error:", err);
-        return reject({ status: 500, message: err.message });
-      }
+// export const uploadFileService = (req, res) => {
+//   return new Promise((resolve, reject) => {
+//     upload(req, res, async function (err) {
+//       if (err) {
+//         console.error("Upload error:", err);
+//         return reject({ status: 500, message: err.message });
+//       }
 
-      const file = req.file;
-      if (!file) {
-        console.error("No file selected");
-        return reject({ status: 400, message: "Bạn chưa chọn file!" });
-      }
+//       const file = req.file;
+//       if (!file) {
+//         console.error("No file selected");
+//         return reject({ status: 400, message: "Bạn chưa chọn file!" });
+//       }
 
-      const { userId } = req.body;
-      if (!userId) {
-        console.error("userId is missing");
-        return reject({
-          status: 400,
-          message: "Vui lòng điền đầy đủ thông tin",
-        });
-      }
+//       const { userId } = req.body;
+//       if (!userId) {
+//         console.error("userId is missing");
+//         return reject({
+//           status: 400,
+//           message: "Vui lòng điền đầy đủ thông tin",
+//         });
+//       }
 
-      const imagePath = `/uploads/avatar/${file.filename}`;
+//       const imagePath = `/uploads/avatar/${file.filename}`;
 
-      // SQL query to update user's avatar in the `khachhangs` table
-      const sql = "UPDATE khachhangs SET anhdaidien = ? WHERE id = ?";
-      try {
-        const connection = await con.getConnection();
-        await connection.execute(sql, [imagePath, userId]);
-        connection.release(); // Release the connection back to the pool
-        resolve({ message: "Avatar updated successfully", imagePath });
-      } catch (error) {
-        console.error("Database error:", error);
-        reject({ status: 500, message: "Database update failed" });
-      }
-    });
-  });
+//       // SQL query to update user's avatar in the `khachhangs` table
+//       const sql = "UPDATE khachhangs SET anhdaidien = ? WHERE id = ?";
+//       try {
+//         const connection = await con.getConnection();
+//         await connection.execute(sql, [imagePath, userId]);
+//         connection.release(); // Release the connection back to the pool
+//         resolve({ message: "Avatar updated successfully", imagePath });
+//       } catch (error) {
+//         console.error("Database error:", error);
+//         reject({ status: 500, message: "Database update failed" });
+//       }
+//     });
+//   });
+// };
+export const uploadFileService = async (req) => {
+  let connection;
+  try {
+    const file = req.file;
+    if (!file) {
+      throw { status: 400, message: "File upload không thành công!" };
+    }
+
+    // Lấy URL của ảnh và public_id từ file đã upload
+    const imagePath = file.path; // URL của ảnh trên Cloudinary
+    const publicId = file.filename; // public_id của ảnh trên Cloudinary
+
+    // Nhận thêm các thông tin khác từ `req.body`
+    const { userId } = req.body;
+    if (!userId) {
+      throw { status: 400, message: "Vui lòng cung cấp userId!" };
+    }
+
+    connection = await con.getConnection();
+
+    // Lấy public_id của ảnh hiện tại
+    const [currentUser] = await connection.execute(
+      "SELECT anhdaidien, public_id FROM khachhangs WHERE id = ?",
+      [userId]
+    );
+
+    if (currentUser.length === 0) {
+      throw { status: 404, message: "Không tìm thấy userId phù hợp!" };
+    }
+
+    const oldPublicId = currentUser[0].public_id; // Lấy public_id của ảnh cũ
+
+    // Xóa ảnh cũ trên Cloudinary nếu có
+    if (oldPublicId) {
+      await deleteImageFromCloudinary(oldPublicId);
+    }
+
+    // Cập nhật ảnh đại diện mới vào bảng khachhangs
+    const sql =
+      "UPDATE khachhangs SET anhdaidien = ?, public_id = ? WHERE id = ?";
+    const [result] = await connection.execute(sql, [
+      imagePath,
+      publicId,
+      userId,
+    ]);
+
+    if (result.affectedRows === 0) {
+      throw { status: 404, message: "Không tìm thấy userId phù hợp!" };
+    }
+
+    // Trả về imagePath
+    return { imagePath };
+  } catch (error) {
+    console.error("Upload service error:", error);
+    throw error; // Ném lỗi để controller `catch` và xử lý
+  } finally {
+    if (connection) {
+      await connection.release();
+    }
+  }
 };
 
-const uploadExperience = multer({ storage: storage }).single("mydata");
+// const uploadExperience = multer({ storage: storage }).single("mydata");
 
-export const uploadExperienceService = (req, res) => {
-  return new Promise((resolve, reject) => {
-    uploadExperience(req, res, async function (err) {
-      if (err) {
-        console.error("Upload error:", err);
-        return reject({ status: 500, message: err.message });
-      }
+// export const uploadExperienceService = (req, res) => {
+//   return new Promise((resolve, reject) => {
+//     uploadExperience(req, res, async function (err) {
+//       if (err) {
+//         console.error("Upload error:", err);
+//         return reject({ status: 500, message: err.message });
+//       }
 
-      const { name, email } = req.body;
+//       const { name, email } = req.body;
 
-      if (!name || !email) {
-        console.error("Name or email is missing");
-        return reject({
-          status: 400,
-          message: "Vui lòng điền đầy đủ thông tin",
-        });
-      }
+//       if (!name || !email) {
+//         console.error("Name or email is missing");
+//         return reject({
+//           status: 400,
+//           message: "Vui lòng điền đầy đủ thông tin",
+//         });
+//       }
 
-      const experienceFile = req.file;
+//       const experienceFile = req.file;
 
-      if (!experienceFile) {
-        console.error("No file selected");
-        return reject({
-          status: 400,
-          message: "Vui lòng chọn ảnh trải nghiệm",
-        });
-      }
+//       if (!experienceFile) {
+//         console.error("No file selected");
+//         return reject({
+//           status: 400,
+//           message: "Vui lòng chọn ảnh trải nghiệm",
+//         });
+//       }
 
-      const Images_path = `/uploads/experience/${experienceFile.filename}`;
+//       const Images_path = `/uploads/experience/${experienceFile.filename}`;
 
-      // Lưu đường dẫn ảnh trải nghiệm vào cơ sở dữ liệu
-      const sql = `
-        INSERT INTO imgdangtin (Images_path, name, email, duyet, createdAt)
-        VALUES (?, ?, ?,'chuaduyet', NOW())
-      `;
+//       // Lưu đường dẫn ảnh trải nghiệm vào cơ sở dữ liệu
+//       const sql = `
+//         INSERT INTO imgdangtin (Images_path, name, email, duyet, createdAt)
+//         VALUES (?, ?, ?,'chuaduyet', NOW())
+//       `;
 
-      try {
-        const connection = await con.getConnection();
-        await connection.execute(sql, [Images_path, name, email]);
-        connection.release(); // Release the connection back to the pool
-        resolve(Images_path);
-      } catch (error) {
-        console.error("Database error:", error);
-        reject({ status: 500, message: "Database insertion failed" });
-      }
+//       try {
+//         const connection = await con.getConnection();
+//         await connection.execute(sql, [Images_path, name, email]);
+//         connection.release(); // Release the connection back to the pool
+//         resolve(Images_path);
+//       } catch (error) {
+//         console.error("Database error:", error);
+//         reject({ status: 500, message: "Database insertion failed" });
+//       }
+//     });
+//   });
+// };
+export const uploadExperienceService = async (req, res) => {
+  try {
+    const { name, email } = req.body;
+
+    if (!name || !email) {
+      console.error("Name or email is missing");
+      return res.status(400).json({
+        message: "Vui lòng điền đầy đủ thông tin",
+      });
+    }
+
+    const experienceFile = req.file;
+
+    if (!experienceFile) {
+      console.error("No file selected");
+      return res.status(400).json({
+        message: "Vui lòng chọn ảnh trải nghiệm",
+      });
+    }
+    console.log(experienceFile);
+    // Lấy URL của ảnh trên Cloudinary và public_id
+    const Images_path = experienceFile.path || null; // Thay thế `undefined` bằng `null`
+    const public_id = experienceFile.filename || null; // Thay thế `undefined` bằng `null`
+
+    // Lưu thông tin ảnh vào bảng `imgdangtin`
+    const sql = `
+      INSERT INTO imgdangtin (Images_path, public_id, name, email, duyet, createdAt)
+      VALUES (?, ?, ?, ?, 'chuaduyet', NOW())
+    `;
+
+    // Thay thế các giá trị undefined bằng null trong mảng tham số
+    const params = [
+      Images_path !== undefined ? Images_path : null,
+      public_id !== undefined ? public_id : null,
+      name,
+      email,
+    ];
+
+    await con.execute(sql, params);
+
+    // Trả về đường dẫn ảnh nếu thành công
+    return res.json({ path: Images_path });
+  } catch (error) {
+    console.error("Database error:", error);
+    return res.status(500).json({
+      message: "Database insertion failed",
     });
-  });
+  }
 };
+
 export const getAll = async () => {
   const connection = await con.getConnection();
   try {
@@ -279,6 +390,7 @@ export const uploadFiles = async (files, titleBlog, contentBlog) => {
     throw new Error("Error during file upload: " + error.message);
   }
 };
+
 export const deleteImageFromCloudinary = async (publicId) => {
   console.log("Attempting to delete image with publicId:", publicId);
   try {
@@ -312,6 +424,15 @@ export const deleteBlogFromDatabase = async (blogId) => {
   try {
     const query = "DELETE FROM blogs WHERE id = ?";
     const [result] = await con.execute(query, [blogId]); // sử dụng execute để thực thi câu query với tham số
+    return result; // trả về kết quả sau khi query thành công
+  } catch (err) {
+    throw new Error(err); // ném ra lỗi nếu có vấn đề xảy ra
+  }
+};
+export const deleteTinDangFromDatabase = async (TDId) => {
+  try {
+    const query = "DELETE FROM imgdangtin WHERE idImg = ?";
+    const [result] = await con.execute(query, [TDId]); // sử dụng execute để thực thi câu query với tham số
     return result; // trả về kết quả sau khi query thành công
   } catch (err) {
     throw new Error(err); // ném ra lỗi nếu có vấn đề xảy ra

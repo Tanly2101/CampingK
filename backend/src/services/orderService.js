@@ -117,6 +117,8 @@ export const findProductById = async (order_id) => {
 	ctdh.*,
   s.Title,
   s.Price,
+  s.PriceSale,
+  s.loaisanpham,
   GROUP_CONCAT(DISTINCT pi.image_url ORDER BY pi.id ASC SEPARATOR ', ') AS image_urls,
   d.shipping_address,
   d.trangthai,
@@ -127,7 +129,7 @@ export const findProductById = async (order_id) => {
   LEFT JOIN product_images pi ON s.id = pi.sanpham_id
   JOIN donhang d ON ctdh.order_id = d.order_id
   WHERE ctdh.order_id = ?
-  GROUP BY s.Title, s.Price, d.shipping_address, d.trangthai, ctdh.quantity;
+  GROUP BY s.Title, s.Price, d.shipping_address, d.trangthai, ctdh.quantity, s.PriceSale, s.loaisanpham;
   `;
   const values = [order_id]; // Define the values array with the order_id
   try {

@@ -2,20 +2,22 @@ import React, { useContext, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { IoMdSearch } from "react-icons/io";
 import { ContextSearch } from "../Context/ContextSearch";
+import { usePagination } from "../Context/PaginationContext";
 
 const Search = () => {
   const { setSearchData } = useContext(ContextSearch);
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
-
+  const { setPage } = usePagination();
   const handleSubmit = (e) => {
     e.preventDefault();
 
     setSearchData(search);
-
+    setSearch("");
     // Nếu đang ở trang chủ, chuyển hướng đến trang sản phẩm
-
+    setPage(1);
     navigate("/sanpham");
+    // setSearch("");
   };
 
   return (

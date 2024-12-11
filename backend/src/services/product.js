@@ -212,8 +212,8 @@ export const getProductsByPrice = async (Price) => {
     // Thêm GROUP BY sau WHERE
     query += " GROUP BY sp.id";
 
-    console.log("Query:", query); // In câu truy vấn
-    console.log("Params:", params); // In các tham số
+    // console.log("Query:", query); // In câu truy vấn
+    // console.log("Params:", params); // In các tham số
 
     // Thực thi truy vấn SQL
     const [rows] = await connection.query(query, params);
@@ -225,18 +225,52 @@ export const getProductsByPrice = async (Price) => {
   }
 };
 
-export const deleteProducts = async (productId) => {
+// export const deleteProducts = async (productId) => {
+//   let connection;
+//   try {
+//     connection = await con.getConnection();
+//     const [result] = await connection.execute(
+//       "DELETE FROM sanpham WHERE id = ?",
+//       [productId]
+//     );
+//     connection.release();
+//     return result;
+//   } catch (error) {
+//     console.error("Đã xảy ra lỗi:", error);
+//     throw error;
+//   }
+// };
+export const toggleProductStatus = async (productId) => {
   let connection;
   try {
     connection = await con.getConnection();
-    const [result] = await connection.execute(
-      "DELETE FROM sanpham WHERE id = ?",
+
+    // Lấy trạng thái hiện tại của sản phẩm
+    const [rows] = await connection.execute(
+      "SELECT loaisanpham FROM sanpham WHERE id = ?",
       [productId]
     );
+
+    if (rows.length === 0) {
+      throw new Error("Product not found");
+    }
+
+    // Xác định trạng thái mới
+    const currentStatus = rows[0].loaisanpham;
+    const newStatus =
+      currentStatus === "Ngưng kinh doanh" ? "new" : "Ngưng kinh doanh";
+
+    // Cập nhật trạng thái mới
+    const [result] = await connection.execute(
+      "UPDATE sanpham SET loaisanpham = ? WHERE id = ?",
+      [newStatus, productId]
+    );
+
     connection.release();
     return result;
   } catch (error) {
-    console.error("Đã xảy ra lỗi:", error);
+    console.error("Error updating product status:", error);
+    if (connection) connection.release();
     throw error;
   }
 };
@@ -257,19 +291,19 @@ export const createProduct = async (
     throw new Error("Some required fields are missing");
   }
 
-  console.log("Dữ liệu đầu vào:", {
-    Title,
-    Images,
-    Description,
-    Price,
-    loaisanpham,
-    sold,
-    thuonghieu,
-    idCategory,
-    gianhap,
-    chitiet,
-    nameCategoryPhu, // Hiển thị Details để kiểm tra
-  });
+  // console.log("Dữ liệu đầu vào:", {
+  //   Title,
+  //   Images,
+  //   Description,
+  //   Price,
+  //   loaisanpham,
+  //   sold,
+  //   thuonghieu,
+  //   idCategory,
+  //   gianhap,
+  //   chitiet,
+  //   nameCategoryPhu, // Hiển thị Details để kiểm tra
+  // });
 
   // Câu lệnh SQL để thêm sản phẩm vào bảng sanpham
   const insertProductQuery = `
@@ -451,7 +485,7 @@ export const updateProducts = async ({
           sold = COALESCE(?, sold),
           thuonghieu = COALESCE(?, thuonghieu),
           idCategory = COALESCE(?, idCategory),
-           nameCategoryPhu = COALESCE(NULLIF(?, ''), ''),
+          nameCategoryPhu = COALESCE(NULLIF(?, ''), ''),
           gianhap = COALESCE(NULLIF(?, 'null'), gianhap),
           chitiet = COALESCE(NULLIF(?, 'null'), chitiet) 
         WHERE id = ?;
@@ -506,4 +540,64 @@ export const updateProducts = async ({
     console.error("Error updating product:", error);
     throw error;
   }
+};
+
+export const addRecentlyViewedProduct = async (productId) => {
+  try {
+    // Kiểm tra xem sản phẩm đã có trong danh sách chưa
+    const [existingProduct] = await con.execute(
+      `SELECT * FROM sanphamganday WHERE product_id = ?`,
+      [productId]
+    );
+
+    if (existingProduct.length > 0) {
+      // Nếu sản phẩm đã tồn tại, cập nhật thời gian xem gần đây
+      await con.execute(
+        `UPDATE sanphamganday SET viewed_at = NOW() WHERE product_id = ?`,
+        [productId]
+      );
+      console.log("Product updated in recently viewed list.");
+      return { message: "Product updated in recently viewed list" };
+    }
+
+    // Thêm sản phẩm mới vào danh sách
+    await con.execute(
+      `INSERT INTO sanphamganday (product_id, viewed_at) VALUES (?, NOW())`,
+      [productId]
+    );
+
+    // Giới hạn danh sách còn 5 sản phẩm mới nhất
+    await con.execute(`
+     DELETE FROM sanphamganday
+  WHERE id NOT IN (
+    SELECT id FROM (
+      SELECT id
+      FROM sanphamganday
+      ORDER BY viewed_at DESC
+      LIMIT 5
+    ) AS temp
+  )
+    `);
+
+    return { message: "Product added to recently viewed list" };
+  } catch (error) {
+    console.error("Error adding product to recently viewed:", error);
+    throw error; // Ném lỗi để xử lý ở cấp cao hơn
+  }
+};
+
+export const getRecentlyViewedProducts = async () => {
+  const [products] = await con.execute(
+    `SELECT p.id, p.Title, p.Price, rv.viewed_at, 
+            GROUP_CONCAT(pi.image_url ORDER BY pi.id) AS image_urls
+     FROM sanphamganday rv
+     JOIN sanpham p ON rv.product_id = p.id
+     LEFT JOIN product_images pi ON p.id = pi.sanpham_id
+     GROUP BY p.id
+     ORDER BY rv.viewed_at DESC`
+  );
+  return products.map((product) => ({
+    ...product,
+    image_urls: product.image_urls ? product.image_urls.split(",") : [],
+  }));
 };

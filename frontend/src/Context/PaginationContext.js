@@ -5,7 +5,7 @@ const PaginationContext = createContext();
 export const PaginationProvider = ({ children }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const [pageSize, setPageSize] = useState(3);
+  const [pageSize, setPageSize] = useState(12);
 
   const setPage = (page) => {
     setCurrentPage(page);

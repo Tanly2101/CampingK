@@ -17,3 +17,7 @@ export { default as Sale } from "./Sale";
 export { default as Brand } from "./Brand";
 export { default as BaoHanh } from "./BaoHanh";
 export { default as CategoryPhu } from "./CategoryPhu";
+export { default as Paypal } from "./Paypal";
+export { default as LoadingSpinner } from "./LoadingSpinner";
+export { default as GioiThieu } from "./GioiThieu";
+export { default as BlogMain } from "./BlogMain";

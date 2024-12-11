@@ -18,8 +18,9 @@ const OrderDetail = ({ orderId }) => {
         const response = await axios.get(
           `${process.env.REACT_APP_SERVER_URL}/api/v1/order/productdt/${orderId}`
         );
-        console.log(data);
+
         setData(response.data);
+        // console.log(data);
       } catch (error) {
         console.error("Error fetching order details:", error);
       }
@@ -30,6 +31,14 @@ const OrderDetail = ({ orderId }) => {
     }
   }, [orderId]);
 
+  const formatCurrency = (amount) => {
+    const formatter = new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    });
+
+    return formatter.format(amount);
+  };
   //   const handleformatDate = (order) => {
   //     const orderDate = new Date(order);
   //     const options = { day: "numeric", month: "short", year: "numeric" };
@@ -43,7 +52,7 @@ const OrderDetail = ({ orderId }) => {
   // };
 
   return (
-    <div className="w-[72%] ml-auto m-5">
+    <div className="w-full ml-auto m-5">
       {data &&
         data.map((orderItem) => (
           <Card
@@ -52,20 +61,20 @@ const OrderDetail = ({ orderId }) => {
           >
             {/* Order Info Section */}
             <div className="flex justify-between mb-4">
-              <p className="text-[#7D879C] text-lg">
+              {/* <p className="text-[#7D879C] text-lg">
                 Order ID:{" "}
                 <span className="text-black font-bold ml-1">
                   {orderItem.order_id}
                 </span>
-              </p>
+              </p> */}
               <p className="text-[#7D879C] text-lg">
-                Order Date:{" "}
+                Ngày đặt hàng:{" "}
                 <span className="text-black font-bold ml-1">
                   {new Date(orderItem.order_date).toLocaleDateString()}
                 </span>
               </p>
               <p className="text-[#7D879C] text-lg">
-                Shipping Address:{" "}
+                Địa chỉ:{" "}
                 <span className="text-black font-bold ml-1">
                   {orderItem.shipping_address}
                 </span>
@@ -88,7 +97,7 @@ const OrderDetail = ({ orderId }) => {
 
             {/* Product Info Section */}
             <h3 className="mt-4 mb-2 font-semibold text-lg">
-              Products in Order:
+              Sản phẩm đã đặt hàng:
             </h3>
             <Row gutter={[16, 16]}>
               <Col span={24}>
@@ -114,8 +123,15 @@ const OrderDetail = ({ orderId }) => {
                       className="w-[80px] h-[80px] object-cover rounded mr-4"
                     />
                     <Meta
-                      title={`${orderItem.quantity} item(s)`}
-                      description={`Total: $${orderItem.Price}.00`}
+                      title={`${orderItem.quantity} sản phẩm`}
+                      // description={`Tổng cộng: ${formatCurrency(
+                      //   orderItem.Price
+                      // )}`}
+                      description={`Giá Sản Phẩm: ${
+                        orderItem.loaisanpham === "Sale" && orderItem.PriceSale
+                          ? formatCurrency(orderItem.PriceSale)
+                          : formatCurrency(orderItem.Price)
+                      }`}
                     />
                   </div>
                 </Card>
@@ -126,9 +142,9 @@ const OrderDetail = ({ orderId }) => {
             <div className="flex flex-col md:flex-row justify-between mt-4">
               <Card className="w-full md:w-[48%] p-4 border-gray-200 shadow-sm">
                 <div>
-                  <p className="text-xl font-bold mb-2">Total Summary</p>
+                  <p className="text-xl font-bold mb-2">Tóm tắt</p>
                   <p className="text-[#7D879C]">
-                    Payment Method:{" "}
+                    Phương thức thanh toán:{" "}
                     <span className="text-black font-bold ml-2.5">
                       {orderItem.payment_method || "N/A"}
                     </span>

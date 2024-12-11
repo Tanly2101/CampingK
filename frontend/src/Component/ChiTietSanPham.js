@@ -1,8 +1,10 @@
 import { React, useCallback, useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { Star } from "lucide-react";
-// import Slider from 'react-slick';
+import Slider from "react-slick";
+
 import "../App.css";
+// import ReactImageMagnify from "react-image-magnify";
 import { CiClock2, CiSignpostL1 } from "react-icons/ci";
 import { BiLike } from "react-icons/bi";
 import { SiAdguard } from "react-icons/si";
@@ -13,8 +15,11 @@ import { useProductContext } from "../Context/ProductContext";
 import { Link } from "react-router-dom";
 import { Rating } from "@material-tailwind/react";
 import { useCart } from "../Context/CartContext";
+import { useAuth } from "../Context/AuthContext";
+import Swal from "sweetalert2";
 const ChiTietSanPham = () => {
   const { id } = useParams();
+  const { user } = useAuth();
   const { cartData, cartToChange } = useCart();
   const { selectedProduct, selectProduct } = useProductContext();
   const [quantity, setQuantity] = useState(1);
@@ -24,12 +29,16 @@ const ChiTietSanPham = () => {
   const [comments, setComments] = useState([]);
   const reviewSectionRef = useRef(null);
   const [averageRating, setAverageRating] = useState(0);
+  const [hiddenComments, setHiddenComments] = useState({});
+  const [userRole, setUserRole] = useState(2);
+  const [showAllComments, setShowAllComments] = useState(false);
   const [formData, setFormData] = useState({
     ContentComments: "",
     LastName: "",
     PhoneComments: "",
     idsanpham: "",
-    SaoDanhGia: 0, // Default rating of 0 stars
+    SaoDanhGia: 0,
+    customerId: null, // Default rating of 0 stars
   });
   const handleInputChange = (e) => {
     const { id, value } = e.target;
@@ -68,30 +77,36 @@ const ChiTietSanPham = () => {
   //   }
   // }, [id, selectedProduct]);
   useEffect(() => {
+    // Cuộn lên đầu trang khi vào trang chi tiết
     window.scrollTo(0, 0);
+
     if (selectedProduct && selectedProduct.id === parseInt(id)) {
+      // Nếu sản phẩm đã được chọn trong context
       setData(selectedProduct);
       setFormData((prevData) => ({
         ...prevData,
         idsanpham: selectedProduct.id,
       }));
     } else {
+      // Nếu không có sản phẩm hoặc id không khớp, fetch từ API
       fetch(`${process.env.REACT_APP_SERVER_URL}/api/v1/product/${id}`)
         .then((response) => response.json())
         .then((data) => {
-          setData(data);
+          setData(data); // Cập nhật state với dữ liệu từ API
+
           setFormData((prevData) => ({
             ...prevData,
             idsanpham: data.id,
           }));
-          console.log("Fetched Data:", data);
-          selectProduct(data); // Lưu sản phẩm đã lấy vào context
+
+          selectProduct(data); // Lưu sản phẩm vào context
         })
         .catch((error) => {
-          console.error("Error:", error);
+          console.error("Error fetching product data:", error);
         });
     }
   }, [id, selectedProduct, selectProduct]);
+  // console.log("Dữ liệu sản phẩm:", data);
   ///////////////////////////////////////////////////////////
   useEffect(() => {
     axios
@@ -101,7 +116,49 @@ const ChiTietSanPham = () => {
       })
       .catch((error) => {});
   }, []);
+  ////////////////////////////////////
+
+  // Default image to display if no other images are provided
+  const defaultImage = `${process.env.REACT_APP_SERVER_URL}/src/uploads/avatarProducts/default-image.jpg`;
+  // Initialize main image to the first image or default image
+  const [mainImage, setMainImage] = useState(
+    data?.HinhAnh
+      ? `${process.env.REACT_APP_SERVER_URL}/src/uploads/avatarProducts/${
+          data.HinhAnh.split(",")[0]
+        }`
+      : defaultImage
+  );
+
+  // Fill the images to ensure at least 3 images are displayed, but avoid filling up if less than 3
+  const images = data?.HinhAnh ? data.HinhAnh.split(",") : [];
+  const filledImages = images.length ? images : ["default-image.jpg"];
+
+  // Update main image only if data changes
+  useEffect(() => {
+    if (data?.HinhAnh) {
+      setMainImage(
+        `${process.env.REACT_APP_SERVER_URL}/src/uploads/avatarProducts/${
+          data.HinhAnh.split(",")[0]
+        }`
+      );
+    } else {
+      setMainImage(defaultImage);
+    }
+  }, [data]);
+
+  const handleImageHover = (image) => {
+    setMainImage(
+      `${process.env.REACT_APP_SERVER_URL}/src/uploads/avatarProducts/${image}`
+    );
+  };
+
+  // Create a flexible layout for thumbnails based on the number of images
+  // const thumbnailLayout =
+  //   filledImages.length < 3
+  //     ? `grid grid-cols-${filledImages.length} gap-4` // For 1 or 2 images
+  //     : "flex gap-4 justify-center"; // For 3 or more images
   ////////////////////////////////////////
+
   useEffect(() => {
     const fetchComments = async () => {
       try {
@@ -159,10 +216,20 @@ const ChiTietSanPham = () => {
   const handleCloseModal = () => {
     setShowModal(false);
   };
+  useEffect(() => {
+    // Cập nhật formData khi người dùng đã đăng nhập
+    if (user && user.id && !formData.LastName && !formData.PhoneComments) {
+      setFormData((prevData) => ({
+        ...prevData,
+        LastName: user.nameTK, // Gán tên người dùng vào LastName
+        PhoneComments: user.phone, // Gán số điện thoại vào PhoneComments
+        customerId: user.id, // Thêm customerId
+      }));
+    }
+  }, [user, formData.LastName, formData.PhoneComments]);
   // console.log("formData:", JSON.stringify(formData));
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     // Validate form data
     if (
       !formData.ContentComments.trim() ||
@@ -184,7 +251,17 @@ const ChiTietSanPham = () => {
       );
 
       console.log("Đã nhận response:", response.data);
-      alert("Đánh giá của bạn đã được gửi thành công!");
+      // alert("Đánh giá của bạn đã được gửi thành công!");
+      // window.location.reload();
+      Swal.fire({
+        icon: "success",
+        title: "Thành công!",
+        text: "Đánh giá của bạn đã được gửi thành công!",
+        confirmButtonText: "OK",
+      }).then(() => {
+        // Reload trang sau khi người dùng bấm nút OK
+        window.location.reload();
+      });
     } catch (error) {
       console.error("Lỗi khi gửi request:", error);
       if (error.response) {
@@ -202,33 +279,47 @@ const ChiTietSanPham = () => {
     // Close the modal after submission
     handleCloseModal();
   };
+  useEffect(() => {
+    // Chạy lại validate khi formData thay đổi
+    if (
+      formData.ContentComments.trim() &&
+      formData.LastName.trim() &&
+      formData.PhoneComments.trim() &&
+      formData.SaoDanhGia !== 0
+    ) {
+      setIsFormValid(true); // Cập nhật trạng thái form hợp lệ nếu tất cả dữ liệu hợp lệ
+    } else {
+      console.log(isFormValid);
+      setIsFormValid(false); // Nếu không hợp lệ, không cho phép gửi
+    }
+  }, [formData]); // Theo dõi sự thay đổi của formData
 
-  // const settings = {
-  //   dots: false,
-  //   infinite: false,
-  //   speed: 500,
-  //   slidesToShow: 3,
-  //   slidesToScroll: 1,
-  // };
+  // Trạng thái lưu trữ tính hợp lệ của form
+  const [isFormValid, setIsFormValid] = useState(false);
+  const AverageRating = parseFloat(data?.DiemDanhGiaTrungBinh) || 0; // Chuyển đổi thành số thực
+  const totalReviews = parseInt(data?.SoLuongDanhGia) || 0; // Tổng số đánh giá
+  // console.log("Tổng số đánh giá:", totalReviews);
 
-  const AverageRating = parseFloat(data?.DiemDanhGiaTrungBinh) || 0;
-  const totalReviews = data?.SoLuongDanhGia || 0;
+  // Tính phần trăm gợi ý
   const recommendPercentage = totalReviews
     ? Math.round(
-        ((parseInt(data?.SoLuong5Sao) + parseInt(data?.SoLuong4Sao)) /
+        (((parseInt(data?.SoLuong5Sao) || 0) +
+          (parseInt(data?.SoLuong4Sao) || 0)) /
           totalReviews) *
           100
       )
     : 0;
 
+  // Phân tích số lượng sao
   const ratingBreakdown = [
-    { stars: 5, count: parseInt(data?.SoLuong5Sao) || 0 },
-    { stars: 4, count: parseInt(data?.SoLuong4Sao) || 0 },
-    { stars: 3, count: parseInt(data?.SoLuong3Sao) || 0 },
-    { stars: 2, count: parseInt(data?.SoLuong2Sao) || 0 },
-    { stars: 1, count: parseInt(data?.SoLuong1Sao) || 0 },
+    { stars: 5, count: parseInt(data?.SoLuong5Sao, 10) || 0 },
+    { stars: 4, count: parseInt(data?.SoLuong4Sao, 10) || 0 },
+    { stars: 3, count: parseInt(data?.SoLuong3Sao, 10) || 0 },
+    { stars: 2, count: parseInt(data?.SoLuong2Sao, 10) || 0 },
+    { stars: 1, count: parseInt(data?.SoLuong1Sao, 10) || 0 },
   ];
 
+  // console.log("Phân tích đánh giá:", ratingBreakdown);
   const renderStars = (rating) => {
     const totalStars = 5;
     const filledStars = Math.floor(rating);
@@ -267,6 +358,39 @@ const ChiTietSanPham = () => {
 
     cartToChange(data, quantity); // Add product with selected quantity to the cart
   };
+  const handleHideComment = async (commentId) => {
+    try {
+      const response = await axios.patch(
+        `http://localhost:5000/api/v1/hide/${commentId}`
+      );
+      console.log(response.data.message); // Thông báo đã ẩn bình luận
+      // Cập nhật lại danh sách bình luận (ẩn bình luận vừa ẩn)
+      setComments((prevComments) =>
+        prevComments.map((comment) =>
+          comment.idComments === commentId
+            ? { ...comment, isHidden: comment.isHidden === 1 ? 0 : 1 }
+            : comment
+        )
+      );
+    } catch (error) {
+      console.error("Có lỗi khi ẩn bình luận:", error);
+    }
+  };
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      const user = JSON.parse(storedUser); // Parse JSON
+      if (Number(user.vaitro) === 1) {
+        setUserRole(1); // Cập nhật thành 1 nếu vaitro là 1
+      }
+    }
+  }, []);
+  const handleSeeMore = () => {
+    setShowAllComments(!showAllComments);
+  };
+
+  // Cắt bình luận hiển thị ban đầu (giới hạn 5)
+  const displayedComments = showAllComments ? comments : comments.slice(0, 5);
   return (
     <div className="w-full m-auto flex flex-col gap-6">
       <div className="h-[81px] flex justify-center items-center bg-gray-100">
@@ -278,33 +402,30 @@ const ChiTietSanPham = () => {
         <div>
           <div className="w-[1050px] m-auto mt-4 flex sm:w-full gap-4 ">
             <div className="flex flex-col gap-4 w-3/5">
-              <div className="h-[458px] w-full border object-cover">
-                {/* <ReactImageMagnify {...{
-              smallImage: {
-                alt: 'Wristwatch by Ted Baker London',
-                isFluidWidth: true,
-                src: require("../assets/img/bepga.jpg")
-              },
-              largeImage: {
-                src: require("../assets/img/bepga.jpg"),
-                width: 1200,
-                height: 1800
-              }/
-            }} /> */}
+              <div className="w-full h-[500px] border flex items-center justify-center">
+                <img
+                  src={mainImage}
+                  alt="Main Display"
+                  className="w-full h-full object-contain"
+                />
               </div>
-              {/* <div className="w-[458px]">
-            <Slider {...settings} className="image-slider bg-gray-400">
-              <div>
-                <img src={require("../assets/img/bepga.jpg")} alt="sanpham" />
+
+              {/* Thumbnail Images */}
+              <div className="flex flex-wrap justify-center items-center gap-4">
+                {filledImages.map((image, index) => (
+                  <div
+                    key={index}
+                    onMouseEnter={() => handleImageHover(image)}
+                    className="w-24 h-24 cursor-pointer mx-2"
+                  >
+                    <img
+                      src={`${process.env.REACT_APP_SERVER_URL}/src/uploads/avatarProducts/${image}`}
+                      alt="Thumbnail"
+                      className="w-full h-full object-cover border border-gray-300 rounded-md"
+                    />
+                  </div>
+                ))}
               </div>
-              <div>
-                <img src={require("../assets/img/bepga.jpg")} alt="sanpham" />
-              </div>
-              <div>
-                <img src={require("../assets/img/bepga.jpg")} alt="sanpham" />
-              </div>
-            </Slider>
-          </div> */}
             </div>
             <div className="flex flex-col  w-2/5 ">
               <div className="w-full flex flex-col gap-6 border p-4 bg-[#efefec] rounded-t-lg">
@@ -325,35 +446,61 @@ const ChiTietSanPham = () => {
                 </h3>
                 <ul className="text-base list-square pl-5 text-gray-500">
                   <li className="leading-6">{data.Description}</li>
+                  {/* <li className="leading-6">{data.DiemDanhGiaTrungBinh}</li> */}
                 </ul>
                 <div>
                   <SelectQuantity
                     quantity={quantity}
                     handleQuantity={handleQuantity}
                     handleChangeQuantity={handleChangeQuantity}
+                    maxQuantity={data.sold}
                   />
                 </div>
                 <div>
-                  <button
-                    className="w-full px-4 py-2 rounded-md text-white bg-red-400 font-semibold my-2"
+                  {/* <button
+                    className={`w-full px-4 py-2 rounded-md font-semibold my-2 ${
+                      data.sold === 0
+                        ? "bg-gray-400 cursor-not-allowed text-gray-300"
+                        : "bg-red-400 text-white hover:bg-red-500"
+                    }`}
                     onClick={handleAddToCart}
+                    disabled={data.sold === 0}
                   >
-                    Thêm vào giỏ hàng
+                    {data.sold === 0
+                      ? "Sản phẩm hết hàng"
+                      : "Thêm vào giỏ hàng"}
+                  </button> */}
+                  <button
+                    className={`w-full px-4 py-2 rounded-md font-semibold my-2 ${
+                      data.sold === 0 || data.loaisanpham === "Ngưng kinh doanh"
+                        ? "bg-gray-400 cursor-not-allowed text-gray-300"
+                        : "bg-red-400 text-white hover:bg-red-500"
+                    }`}
+                    onClick={handleAddToCart}
+                    disabled={
+                      data.sold === 0 || data.loaisanpham === "Ngưng kinh doanh"
+                    }
+                  >
+                    {data.sold === 0
+                      ? "Sản phẩm hết hàng"
+                      : data.loaisanpham === "Ngưng kinh doanh"
+                      ? "Ngưng Kinh Doanh"
+                      : "Thêm vào giỏ hàng"}
                   </button>
                 </div>
               </div>
               <div className="flex items-center justify-around text-[11px] w-full h-12 p-2 bg-[#aead9d] rounded-b-lg">
                 <div>
                   <CiClock2 className="items-center w-full" />
-                  <span>SHIPS IN 24 HRS</span>
+                  <span>Chuyển đến Trong 24h</span>
                 </div>
                 <div>
                   <BiLike className="items-center w-full" />
-                  <span>EASY RETURNS</span>
+                  <span>Trả Lại Dễ Dàng</span>
                 </div>
                 <div>
                   <SiAdguard className="items-center w-full" />
-                  <span>LIFETIME WARRANTY*</span>
+                  <span>Bảo Hành</span>
                 </div>
               </div>
             </div>
@@ -368,7 +515,7 @@ const ChiTietSanPham = () => {
         {/* Rating Section */}
         <div className="w-full max-w-4xl mx-auto p-4">
           <h2 className="text-2xl font-bold text-center mb-6">
-            Customer Ratings and Reviews
+            Xếp Hạng Đánh Giá Của Khách Hàng
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white p-6 rounded-lg shadow-md">
@@ -376,9 +523,7 @@ const ChiTietSanPham = () => {
                 <span className="text-5xl font-bold">
                   {recommendPercentage}%
                 </span>
-                <p className="text-sm text-gray-600 mt-2">
-                  of reviewers would recommend this product
-                </p>
+                <p className="text-sm text-gray-600 mt-2">Số Người Đánh Giá</p>
               </div>
               <div className="flex items-center justify-center mt-4">
                 {[...Array(5)].map((_, index) => (
@@ -392,23 +537,27 @@ const ChiTietSanPham = () => {
                   />
                 ))}
               </div>
-              <p className="text-center mt-2">{totalReviews} Reviews</p>
+              <p className="text-center mt-2">{totalReviews} Bình Luận</p>
               <button
                 onClick={handleScrollToReview}
                 className="mt-4 w-full py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
               >
-                Write a Review
+                Viết Bình Luận
               </button>
             </div>
             <div className="bg-white p-6 rounded-lg shadow-md">
-              <h3 className="text-lg font-semibold mb-4">Ratings Breakdown</h3>
+              <h3 className="text-lg font-semibold mb-4">Phân Tích Xếp Hạng</h3>
               {ratingBreakdown.map(({ stars, count }) => (
                 <div key={stars} className="flex items-center mb-2">
-                  <span className="w-16 text-sm">{stars} Stars</span>
+                  <span className="w-16 text-sm">{stars} Sao</span>
                   <div className="flex-grow mx-2 bg-gray-200 rounded-full h-2">
                     <div
                       className="bg-yellow-400 h-2 rounded-full"
-                      style={{ width: `${(count / totalReviews) * 100}%` }}
+                      style={{
+                        width: totalReviews
+                          ? `${(count / totalReviews) * 100}%`
+                          : "0%",
+                      }}
                     ></div>
                   </div>
                   <span className="w-8 text-sm text-right">{count}</span>
@@ -420,44 +569,84 @@ const ChiTietSanPham = () => {
 
         {/* Comments Section */}
         <div className="bg-[#EFEFEC] border-2 rounded-md p-4 mb-4">
-          {comments.length > 0 ? (
-            comments.map((comment) => (
-              <div key={comment.id} className="w-full mb-4">
-                {/* Name and Date */}
-                <div className="flex justify-between">
-                  <div className="font-bold text-[16px]">
-                    {comment.LastName}
+          {displayedComments.length > 0 ? (
+            displayedComments.map((comment) => (
+              <div key={comment.idComments} className="w-full mb-4">
+                {/* Nút ẩn/hiện chỉ hiển thị khi user có vaitro = 1 */}
+                {userRole === 1 && (
+                  <button
+                    onClick={() => handleHideComment(comment.idComments)}
+                    className="mb-2 px-3 py-1 bg-blue-500 text-white text-sm rounded"
+                  >
+                    {comment.isHidden ? "Hiển thị bình luận" : "Ẩn bình luận"}
+                  </button>
+                )}
+
+                {/* Hiển thị chi tiết bình luận nếu không bị ẩn */}
+                {!comment.isHidden && (
+                  <div className="comment-details">
+                    <div className="flex justify-between">
+                      <div className="font-bold text-[16px]">
+                        {comment.LastName}
+                      </div>
+                      <div className="text-[11px] text-[#313022]">
+                        {new Date(
+                          comment.CreateAtComments
+                        ).toLocaleDateString()}
+                      </div>
+                    </div>
+
+                    {comment.Verified === 1 && (
+                      <div className="mt-2 text-[12px] text-green-600 font-semibold">
+                        <span className="bg-green-100 text-green-600 py-1 px-2 rounded-full">
+                          Đã xác minh
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex items-start mt-4">
+                      <span className="text-[16px] font-medium text-[#313022] mr-2">
+                        Đánh Giá:{" "}
+                      </span>
+                      {renderStars(comment.SaoDanhGia)}
+                    </div>
+
+                    <div className="mt-3 text-[15px] leading-[1.6] text-[#4a4a4a]">
+                      {comment.ContentComments}
+                    </div>
+
+                    <div className="border-b border-gray-300 mt-4"></div>
                   </div>
-                  <div className="text-[11px] text-[#313022]">
-                    {new Date(comment.CreateAtComments).toLocaleDateString()}
-                  </div>
-                </div>
-
-                {/* Rating */}
-                <div className="flex items-center mt-2">
-                  <span className="text-[14px]">Rating: </span>
-                  {renderStars(comment.SaoDanhGia)}
-                </div>
-
-                {/* Comment Content */}
-                <div className="mt-2 text-[14px] text-[#313022]">
-                  {comment.ContentComments}
-                </div>
-
-                {/* Divider */}
-                <div className="border-b border-gray-300 mt-4"></div>
+                )}
               </div>
             ))
           ) : (
-            <div>No comments available for this product.</div>
+            <div>Không có bình luận cho sản phẩm này</div>
+          )}
+
+          {/* Nút Xem thêm hoặc Thu gọn */}
+          {comments.length > 5 && (
+            <button
+              onClick={handleSeeMore}
+              className="mt-4 px-4 py-2 bg-blue-500 text-white text-sm rounded"
+            >
+              {showAllComments ? "Thu gọn" : "Xem thêm"}
+            </button>
           )}
         </div>
 
         {/* Review Form */}
         <div ref={reviewSectionRef}>
-          <h2>Hãy Nhập đánh giá của bạn</h2>
+          <h2 className="font-bold text-4xl text-center text-gray-800">
+            Hãy nhập đánh giá của bạn
+          </h2>
           <div className="flex flex-col gap-2">
-            <label htmlFor="ContentComments">Nội dung mô tả</label>
+            <label
+              htmlFor="ContentComments"
+              className="block text-lg font-medium text-gray-700"
+            >
+              Nội dung mô tả
+            </label>
             <textarea
               id="ContentComments"
               cols="30"
@@ -469,7 +658,9 @@ const ChiTietSanPham = () => {
 
             {/* Star Rating Section */}
             <div className="flex items-center gap-2 mt-4">
-              <label className="block mb-1">Đánh giá sao:</label>
+              <label className="block text-base font-medium text-gray-700 mb-2">
+                Đánh giá sao:
+              </label>
               <div className="flex items-center">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <label key={star} className="cursor-pointer">
@@ -516,7 +707,7 @@ const ChiTietSanPham = () => {
                 onClick={handleOpenModal}
                 disabled={!formData.ContentComments.trim()}
               >
-                DONE
+                Đánh giá ngay
               </button>
               <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300 mb-2">
                 {formData.ContentComments.trim()
@@ -545,9 +736,10 @@ const ChiTietSanPham = () => {
                     <input
                       id="LastName"
                       type="text"
-                      value={formData.LastName}
+                      value={user && user.id ? user.nameTK : formData.LastName}
                       onChange={handleInputChange}
                       className="w-full border border-gray-300 rounded-md p-2"
+                      disabled={!!(user && user.id)}
                       required
                     />
                   </div>
@@ -558,17 +750,21 @@ const ChiTietSanPham = () => {
                     <input
                       id="PhoneComments"
                       type="tel"
-                      value={formData.PhoneComments}
+                      value={
+                        user && user.id ? user.phone : formData.PhoneComments
+                      }
                       onChange={handleInputChange}
                       className="w-full border border-gray-300 rounded-md p-2"
+                      disabled={!!(user && user.id)}
                       required
                     />
                   </div>
                   <button
                     type="submit"
                     className="bg-deep-orange-700 text-white py-2 px-4 rounded-md hover:bg-deep-orange-800"
+                    disabled={!isFormValid}
                   >
-                    Submit
+                    Duyệt
                   </button>
                 </form>
               </div>
@@ -579,12 +775,12 @@ const ChiTietSanPham = () => {
 
       <div className="w-full">
         <marquee className="text-[34px] bg-blue-800 text-white">
-          Chào mừng bạn đến với Tui là tất cả cuộc đời bạn
+          Chào mừng bạn đến với CampingK
         </marquee>
       </div>
       <div className="w-full mt-4 border-b-2 border-red-500">
         <h3 className=" w-[1050px] text-[40px] m-auto font-somibold py-[15px] sm:w-full">
-          OrTher Customer ALSO Like
+          Khách Hàng Khác Cũng Thích
         </h3>
       </div>
       <div className="h-full flex flex-row justify-center gap-4">
@@ -599,21 +795,30 @@ const ChiTietSanPham = () => {
                   <Link
                     to={`/SanPham/${itemSanPham.id}`}
                     // onClick={() => selectProduct(itemSanPham)}
-                    onClick={(e) => {
-                      selectProduct(itemSanPham);
-                      window.location.href = `/SanPham/${itemSanPham.id}`;
-                    }}
+                    // onClick={(e) => {
+                    //   selectProduct(itemSanPham);
+                    //   // window.location.href = `/SanPham/${itemSanPham.id}`;
+                    // }}
                   >
                     <div className="w-[397px] h-[397px] sm:w-full sm:h-full">
                       <img
-                        src={`/img/${itemSanPham.Images}`}
+                        src={`${
+                          process.env.REACT_APP_SERVER_URL
+                        }/src/uploads/avatarProducts/${
+                          itemSanPham.HinhAnh
+                            ? itemSanPham.HinhAnh.split(",")[0]
+                            : "default-image.jpg"
+                        }`}
                         className="h-full"
                         alt="sanpham"
                       />
                     </div>
                     <div className="cardContent">
                       <h1>{itemSanPham.Title}</h1>
-                      <p>{itemSanPham.Description}</p>
+                      <p className="line-clamp-1">{`${itemSanPham.Description.slice(
+                        0,
+                        50
+                      )}...`}</p>
                       <button className="border border-cyan-900 hover:bg-deep-orange-500 rounded-md w-full h-[40px]">
                         ADD to Card
                       </button>

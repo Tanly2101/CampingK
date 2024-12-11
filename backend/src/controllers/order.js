@@ -91,13 +91,13 @@ export const createOrderDetailController = async (req, res, next) => {
   }
 };
 export const findAllByCustomerId = async (req, res) => {
-  const orderId = req.params.id; // Changed 'DH' to 'orderId' for clarity
+  const orderId = req.params.id;
   try {
-    const order = await orderService.findProductById(orderId); // Await the result of the order service
-    res.status(200).json(order); // Send the result as a JSON response with a 200 status
+    const order = await orderService.findProductById(orderId);
+    res.status(200).json(order);
   } catch (error) {
-    console.error("Đã xảy ra lỗi:", error); // Log the error to the console
-    res.status(500).json({ message: "Đã xảy ra lỗi." }); // Send a 500 status with an error message
+    console.error("Đã xảy ra lỗi:", error);
+    res.status(500).json({ message: "Đã xảy ra lỗi." });
   }
 };
 export const findAll = async (req, res) => {
